@@ -15,8 +15,9 @@ function echo_error {
 }
 
 # Instalar GNOME
-sudo pacman -S gnome-shell gnome-control-center gnome-terminal gnome-keyring nautilus file-roller firefox gdm 
-sudo systemctl enable gdm
+echo_info "Instalando GNOME y aplicaciones relacionadas..."
+sudo pacman -S --noconfirm gnome-shell gnome-control-center gnome-terminal gnome-keyring nautilus file-roller firefox gdm
+sudo systemctl enable --now gdm
 
 # Actualizar sistema y habilitar multilib
 echo_info "Actualizando sistema y habilitando repositorio multilib..."
@@ -24,10 +25,10 @@ sudo sed -i '/\[multilib\]/,/Include/s/^#//' /etc/pacman.conf
 sudo pacman -Syu --noconfirm
 
 # Instalar herramientas esenciales
-echo_info "Instalando herramientas esenciales (base-devel, linux-headers, git, curl, zsh)..."
+echo_info "Instalando herramientas esenciales..."
 sudo pacman -S --noconfirm base-devel linux-headers git curl zsh
 
-# Instalar yay (AUR helper)
+# Instalar yay (AUR helper) si no está instalado
 if ! command -v yay &>/dev/null; then
     echo_info "Instalando yay (AUR helper)..."
     git clone https://aur.archlinux.org/yay.git
@@ -100,20 +101,23 @@ echo_info "Instalando y activando Blueman y Bluez..."
 sudo pacman -S --noconfirm blueman bluez bluez-utils
 sudo systemctl enable --now bluetooth.service
 
-# Instalar MySQL Server
-echo_info "Instalando MySQL Server..."
+# Instalar MySQL y configurar
+echo_info "Instalando MySQL..."
 sudo pacman -S --noconfirm mysql
+sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
 sudo systemctl enable --now mysqld
-echo_info "Inicializando MySQL..."
-sudo mysql_secure_installation
+sudo systemctl start mysqld  # Asegurarse de que MySQL se inicie
 
-# Instalar MySQL Workbench
-echo_info "Instalando MySQL Workbench..."
-yay -S --noconfirm mysql-workbench
-
-# Instalar DB Manager
-echo_info "Instalando DB Manager..."
-yay -S --noconfirm db-mgr
+# Instalar Snapd
+echo_info "Instalando Snapd..."
+git clone https://aur.archlinux.org/snapd.git
+cd snapd || exit
+makepkg -si --noconfirm
+cd ..
+rm -rf snapd
+sudo systemctl enable --now snapd.socket
+sudo systemctl enable --now snapd.apparmor.service
+sudo ln -s /var/lib/snapd/snap /snap
 
 # Instalar aplicaciones de Flatpak
 echo_info "Instalando aplicaciones de Flatpak..."
@@ -128,7 +132,6 @@ echo -n "pip: " && pip --version
 echo -n "Java: " && java -version
 echo -n "Flatpak: " && flatpak --version
 echo -n "MySQL: " && mysql --version
-echo -n "MySQL Workbench: " && mysql-workbench --version
 
 # Finalización
 echo_info "Configuración completada. Reinicia tu sistema para aplicar todos los cambios."
